@@ -1,20 +1,28 @@
 from .models import UserReview, ReviewReception, Badge, ObtainedBadge
 
 def get_user_stats(user):
-    from django.db.models import Count, Q
+    from django.db.models import Count, Q, Sum
+
+    reviews = user.userreview_set.count()
+
+    likes_given = ReviewReception.objects.filter(user=user, reaction=ReviewReception.LIKE).count()
+
+    dislikes_given = ReviewReception.objects.filter(user=user, reaction=ReviewReception.DISLIKE).count()
+
+    likes_received = UserReview.objects.filter(user=user) .annotate(
+        total_likes=Count('reviewreception', filter=Q(reviewreception__reaction=ReviewReception.LIKE)),
+    ).aggregate(total_likes_received=Sum('total_likes'))['total_likes_received'] or 0
+
+    dislikes_received = UserReview.objects.filter(user=user).annotate(
+        total_dislikes=Count('reviewreception', filter=Q(reviewreception__reaction=ReviewReception.DISLIKE)),
+    ).aggregate(total_dislikes_received=Sum('total_dislikes'))['total_dislikes_received'] or 0
 
     return {
-        'reviews': user.userreview_set.count(),
-        'likes_given': user.userreview_set.filter(reaction=ReviewReception.LIKE).count(),
-        'dislikes_given': user.userreview_set.filter(reaction=ReviewReception.DISLIKE).count(),
-        'likes_received': UserReview.objects.filter(user=user)
-        .annotate(
-            total_likes=Count('reviewreception', filter=Q(reviewreception__reaction=ReviewReception.LIKE)),
-        ).aggregate(total=Count('total_likes'))['total'] or 0,
-        '.dislikes_received': UserReview.objects.filter(user=user)
-        .annotate(
-            total_dislikes=Count('reviewreception', filter=Q(reviewreception__reaction=ReviewReception.DISLIKE)),
-        ).aggregate(total=Count('total_dislikes'))['total'] or 0,
+        'reviews': reviews,
+        'likes_given': likes_given,
+        'dislikes_given': dislikes_given,
+        'likes_received': likes_received,
+        'dislikes_received': dislikes_received,
     }
 
 def check_and_add_badge(user):
