@@ -1,10 +1,9 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
-from django.db.models import Count, Q, Sum
-from .models import UserReview, ReviewReception
-from .utils import get_user_stats
-
-# Create your tests here.
+from rest_framework.test import APITestCase
+from rest_framework import status
+from ..models import UserReview, ReviewReception
+from ..utils import get_user_stats
 
 class UserStatsTest(TestCase):
     def setUp(self):
@@ -23,7 +22,7 @@ class UserStatsTest(TestCase):
         ReviewReception.objects.create(review=self.review_3, reaction=ReviewReception.DISLIKE, user=self.user_1)
         ReviewReception.objects.create(review=self.review_4, reaction=ReviewReception.DISLIKE, user=self.user_1)
 
-    def test_get_user_reviews(self):
+    def test_get_user_stats(self):
         user_stats = get_user_stats(self.user_2)
 
         print(user_stats)
@@ -33,3 +32,7 @@ class UserStatsTest(TestCase):
         self.assertEqual(user_stats['dislikes_given'], 0)
         self.assertEqual(user_stats['likes_received'], 0)
         self.assertEqual(user_stats['dislikes_received'], 1)
+
+class UserBadgesTest(APITestCase):
+    def setUp(self):
+        self.user_1 = User.objects.create_user(username='testuser', password='testpassword')
