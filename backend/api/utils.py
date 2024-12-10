@@ -28,7 +28,7 @@ def get_user_stats(user):
 def check_and_add_badge(user):
     user_stats = get_user_stats(user)
 
-    earned_badges = ObtainedBadge.objects.filter(user=user).values_list('badge_obtained', flat=True)
+    earned_badges = ObtainedBadge.objects.filter(user=user).values_list('badge_obtained_id', flat=True)
     available_badges = Badge.objects.exclude(id__in=earned_badges)
 
     for badge in available_badges:

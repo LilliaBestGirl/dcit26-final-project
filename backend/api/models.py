@@ -56,8 +56,8 @@ class Badge(models.Model):
     
 class ObtainedBadge(models.Model):
     date_obtained = models.DateField(auto_now_add=True)
-    badge_obtained = models.ForeignKey(User, on_delete=models.CASCADE)
-    user = models.ForeignKey(Badge, on_delete=models.CASCADE)
+    badge_obtained = models.ForeignKey(Badge, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ['badge_obtained', 'user']

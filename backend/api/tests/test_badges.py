@@ -2,8 +2,8 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework import status
-from ..models import UserReview, ReviewReception
-from ..utils import get_user_stats
+from ..models import UserReview, ReviewReception, ObtainedBadge, Badge
+from ..utils import get_user_stats, check_and_add_badge
 
 class UserStatsTest(TestCase):
     def setUp(self):
@@ -36,3 +36,26 @@ class UserStatsTest(TestCase):
 class UserBadgesTest(APITestCase):
     def setUp(self):
         self.user_1 = User.objects.create_user(username='testuser', password='testpassword')
+
+        Badge.objects.create(badge_name='Test Badge', description='Test badge', condition_type='reviews', tier='bronze', threshold=1)
+
+        response = self.client.post('/api/token/', {'username': 'testuser', 'password': 'testpassword'}, format='json')
+        self.access_token = response.data['access']
+
+    def test_badge_obtained(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
+        
+        review_data = {
+            'user': self.user_1.id,
+            'book': 1,
+            'rating': 4,
+            'review': 'Great book!'
+        }
+
+        response = self.client.post('/api/user/review/', review_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        check_and_add_badge(self.user_1)
+
+        obtained_badges = ObtainedBadge.objects.filter(user=self.user_1)
+        self.assertEqual(obtained_badges.count(), 1)
