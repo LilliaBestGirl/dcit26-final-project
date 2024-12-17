@@ -1,9 +1,11 @@
 from rest_framework import generics
 from rest_framework import viewsets
+from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import NotFound
 from django.db.models import Count, Q
 from django.contrib.auth.models import User
+import requests # TODO: use to get book information from OpenLibrary
 from .models import UserReview, ReviewReception, Badge, ObtainedBadge
 from .serializers import ReviewSerializer, UserSerializer
 from .utils import check_and_add_badge
@@ -45,9 +47,31 @@ class UserReviewView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return UserReview.objects.filter(user=self.request.user)
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+        check_and_add_badge(self.request.user)
 
 class BadgeView(generics.ListAPIView):
     serializer_class = Badge
     
     def get_queryset(self):
         return Badge.objects.filter(user=self.request.user)
+
+class SearchView(generics.ListAPIView):
+    
+    def get(self, request, format=None):
+        query = request.query_params.get('q', '')
+        page = request.query_params.get('page', 1)
+
+        url = f'https://openlibrary.org/search.json?q={query}+computer+programming+software&limit=20&page={page}'
+        response = requests.get(url)
+        print(response.status_code)
+
+        books = response.json().get('docs', [])
+        return Response(books)
+
+
+
+        

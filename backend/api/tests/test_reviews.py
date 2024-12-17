@@ -1,9 +1,7 @@
-from django.test import TestCase
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework import status
-from ..models import UserReview, ReviewReception
-from ..utils import get_user_stats
+from ..models import UserReview
 
 # Create your tests here.
 
@@ -12,7 +10,6 @@ class UserReviewTest(APITestCase):
         self.user = User.objects.create_user(username='testuser', password='testpassword')
 
         self.review_data = {
-            'user': self.user.id,
             'book': 1,
             'rating': 4,
             'review': 'Great book!'
@@ -24,7 +21,9 @@ class UserReviewTest(APITestCase):
         self.access_token = response.data['access']
 
     def test_create_review(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
         response = self.client.post('/api/user/review/', self.review_data, format='json')
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
     
     def test_get_reviews(self):

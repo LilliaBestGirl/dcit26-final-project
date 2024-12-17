@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/register/', views.RegisterView.as_view(), name='register'),
     path('api-auth/', include('rest_framework.urls')),
+    path('api/search/', views.SearchView.as_view(), name='search'),
     path('', include(router.urls)),
     path('api/book/review/<int:book_id>/', views.BookReviewsView.as_view(), name='review'),
     path('api/user/badge/', views.BadgeView.as_view(), name='user_badge'),
