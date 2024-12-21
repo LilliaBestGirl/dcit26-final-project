@@ -10,12 +10,12 @@ class UserReviewTest(APITestCase):
         self.user = User.objects.create_user(username='testuser', password='testpassword')
 
         self.review_data = {
-            'book': 1,
+            'book': '1',
             'rating': 4,
             'review': 'Great book!'
         }
 
-        self.review_data_2 = UserReview.objects.create(rating=2, review='Not bad, but could be better.', book=2, user=self.user)
+        self.review_data_2 = UserReview.objects.create(rating=2, review='Not bad, but could be better.', book='2', user=self.user)
 
         response = self.client.post('/api/token/', {'username': 'testuser', 'password': 'testpassword'}, format='json')
         self.access_token = response.data['access']
@@ -44,7 +44,7 @@ class UserReviewTest(APITestCase):
         self.updated_data = {
             'rating': 3,
             'review': 'EDIT: changed my mind, it\'s actually not that bad.',
-            'book': 2,
+            'book': '2',
             'user': self.user.id,
         }
 

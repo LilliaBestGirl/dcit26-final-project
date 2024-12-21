@@ -12,7 +12,8 @@ urlpatterns = [
     path('api/register/', views.RegisterView.as_view(), name='register'),
     path('api-auth/', include('rest_framework.urls')),
     path('api/search/', views.SearchView.as_view(), name='search'),
+    path('api/book/', views.BookDetailView.as_view(), name='book'),
     path('', include(router.urls)),
-    path('api/book/review/<int:book_id>/', views.BookReviewsView.as_view(), name='review'),
+    path('api/book/review/<str:key>/', views.BookReviewsView.as_view(), name='review'),
     path('api/user/badge/', views.BadgeView.as_view(), name='user_badge'),
 ]

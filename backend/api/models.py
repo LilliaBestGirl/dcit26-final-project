@@ -9,7 +9,7 @@ class UserReview(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
     review = models.TextField()
-    book = models.PositiveIntegerField() # ID will be from another API
+    book = models.CharField(max_length=100, default="")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
