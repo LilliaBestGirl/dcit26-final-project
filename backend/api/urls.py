@@ -5,6 +5,7 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'api/user/review', views.UserReviewView, basename='user_review')
+router.register(r'api/review/reaction', views.ReviewReceptionView, basename='review_reception')
 
 urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -15,5 +16,5 @@ urlpatterns = [
     path('api/book/', views.BookDetailView.as_view(), name='book'),
     path('', include(router.urls)),
     path('api/book/review/<str:key>/', views.BookReviewsView.as_view(), name='review'),
-    path('api/user/badge/', views.BadgeView.as_view(), name='user_badge'),
+    path('api/user/badge/', views.ObtainedBadgeView.as_view(), name='user_badge'),
 ]

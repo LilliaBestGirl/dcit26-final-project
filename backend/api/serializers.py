@@ -24,7 +24,13 @@ class ReviewSerializer(serializers.ModelSerializer):
 class ReviewReceptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReviewReception
-        fields = ['id', 'reaction', 'user', 'review']
+        fields = ['review', 'reaction']
+
+    def validate(self, data):
+        reaction = data.get('reaction')
+        if reaction not in ['like', 'dislike']:
+            raise serializers.ValidationError("Reaction must be 'like' or 'dislike'")
+        return data
 
 class BadgeSerializer():
     class Meta:
