@@ -15,11 +15,16 @@ class UserSerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.ModelSerializer):
     total_likes = serializers.IntegerField(read_only=True)
     total_dislikes = serializers.IntegerField(read_only=True)
+    user_reaction = serializers.CharField(allow_null=True)
+    user = serializers.SerializerMethodField()
 
     class Meta:
         model = UserReview
-        fields = ['id', 'rating', 'review', 'created_at', 'user', 'book', 'total_likes', 'total_dislikes']
+        fields = ['id', 'rating', 'review', 'created_at', 'user', 'book', 'total_likes', 'total_dislikes', 'user_reaction']
         read_only_fields = ['user']
+
+    def get_user(self, obj):
+        return obj.user.username
 
 class ReviewReceptionSerializer(serializers.ModelSerializer):
     class Meta:

@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework import status
-from ..models import UserReview
+from ..models import UserReview, ReviewReception
 
 # Create your tests here.
 
@@ -15,7 +15,8 @@ class UserReviewTest(APITestCase):
             'review': 'Great book!'
         }
 
-        self.review_data_2 = UserReview.objects.create(rating=2, review='Not bad, but could be better.', book='2', user=self.user)
+        self.review_data_2 = UserReview.objects.create(rating=2, review='Not bad, but could be better.', book='/works/OL20008185W', user=self.user)
+        self.review_like = ReviewReception.objects.create(review=self.review_data_2, reaction=ReviewReception.LIKE, user=self.user)
 
         response = self.client.post('/api/token/', {'username': 'testuser', 'password': 'testpassword'}, format='json')
         self.access_token = response.data['access']
@@ -30,6 +31,7 @@ class UserReviewTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
 
         response = self.client.get('/api/user/review/')
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_retrieve_review(self):
@@ -59,3 +61,10 @@ class UserReviewTest(APITestCase):
 
         response = self.client.delete('/api/user/review/1/')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_book_reviews(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
+
+        response = self.client.get('/api/book/review/?key=/works/OL20008185W')
+        print(response.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

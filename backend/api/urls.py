@@ -15,6 +15,6 @@ urlpatterns = [
     path('api/search/', views.SearchView.as_view(), name='search'),
     path('api/book/', views.BookDetailView.as_view(), name='book'),
     path('', include(router.urls)),
-    path('api/book/review/<str:key>/', views.BookReviewsView.as_view(), name='review'),
+    path('api/book/review/', views.BookReviewsView.as_view(), name='review'),
     path('api/user/badge/', views.ObtainedBadgeView.as_view(), name='user_badge'),
 ]

@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import NotFound
 from rest_framework import status
-from django.db.models import Count, Q, Avg
+from django.db.models import Count, Q, Avg, Case, When, Value, CharField
 from django.contrib.auth.models import User
 import requests # TODO: use to get book information from OpenLibrary
 from .models import UserReview, ReviewReception, Badge, ObtainedBadge
@@ -23,11 +23,16 @@ class BookReviewsView(generics.ListAPIView):
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
-        book_id = self.kwargs['book_id']
+        key = self.request.query_params.get('key', '')
 
-        queryset = UserReview.objects.filter(book=book_id).annotate(
+        queryset = UserReview.objects.filter(book=key).annotate(
             total_likes=Count('reviewreception', filter=Q(reviewreception__reaction=ReviewReception.LIKE)),
             total_dislikes=Count('reviewreception', filter=Q(reviewreception__reaction=ReviewReception.DISLIKE)),
+            user_reaction=Case(
+                When(reviewreception__user=self.request.user, then='reviewreception__reaction'),
+                default=Value(None),
+                output_field=CharField()
+            )
         )
 
         if not queryset.exists():
@@ -112,6 +117,7 @@ class SearchView(generics.ListAPIView):
 
         url = f'https://openlibrary.org/search.json?q={query}+computer+programming+software&limit=20&page={page}'
         response = requests.get(url)
+        total_results = response.json().get('numFound', '')
         books = response.json().get('docs', [])
         
         books_list = []
@@ -126,6 +132,7 @@ class SearchView(generics.ListAPIView):
             avg_rating = rating.get('avg_rating') or 'No ratings yet'
 
             books_list.append({
+                'numFound': total_results,
                 'title': title,
                 'cover_edition_key': cover_edition_key,
                 'key': key,
