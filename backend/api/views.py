@@ -71,10 +71,10 @@ class UserReviewView(viewsets.ModelViewSet):
 class ReviewReceptionView(generics.CreateAPIView):
     serializer_class = ReviewReceptionSerializer
 
-    def perform_create(self, serializer):
-        user = self.request.user
-        review_id = self.request.data.get('review')
-        reaction = self.request.data.get('reaction')
+    def create(self, request):
+        user = request.user
+        review_id = request.data.get('review')
+        reaction = request.data.get('reaction')
 
         if not reaction:
             return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)

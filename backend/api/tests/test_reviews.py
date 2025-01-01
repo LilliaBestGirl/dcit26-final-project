@@ -91,12 +91,12 @@ class ReviewReceptionTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
 
         response = self.client.post('/api/review/reaction/', {'review': self.review.id, 'reaction': 'dislike'}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         print(ReviewReception.objects.get(user=self.user, review=self.review).reaction)
 
     def test_cancel_reaction(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
 
         response = self.client.post('/api/review/reaction/', {'review': self.review.id, 'reaction': 'like'}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         print(ReviewReception.objects.filter(user=self.user, review=self.review).exists())
