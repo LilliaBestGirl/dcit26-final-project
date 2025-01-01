@@ -1,12 +1,12 @@
-from rest_framework import generics
-from rest_framework import viewsets
+from django.shortcuts import get_object_or_404
+from rest_framework import generics, viewsets, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import NotFound
 from rest_framework import status
-from django.db.models import Count, Q, Avg, Case, When, Value, CharField
+from django.db.models import Count, Avg, Subquery, OuterRef
 from django.contrib.auth.models import User
-import requests # TODO: use to get book information from OpenLibrary
+import requests
 from .models import UserReview, ReviewReception, Badge, ObtainedBadge
 from .serializers import (ReviewSerializer, UserSerializer, ReviewReceptionSerializer,
                           BadgeSerializer, ObtainedBageSerializer)
@@ -26,12 +26,20 @@ class BookReviewsView(generics.ListAPIView):
         key = self.request.query_params.get('key', '')
 
         queryset = UserReview.objects.filter(book=key).annotate(
-            total_likes=Count('reviewreception', filter=Q(reviewreception__reaction=ReviewReception.LIKE)),
-            total_dislikes=Count('reviewreception', filter=Q(reviewreception__reaction=ReviewReception.DISLIKE)),
-            user_reaction=Case(
-                When(reviewreception__user=self.request.user, then='reviewreception__reaction'),
-                default=Value(None),
-                output_field=CharField()
+            total_likes=Subquery(
+                ReviewReception.objects.filter(
+                    review=OuterRef('id'), reaction=ReviewReception.LIKE
+                ).values('review').annotate(count=Count('id')).values('count')[:1]
+            ),
+            total_dislikes=Subquery(
+                ReviewReception.objects.filter(
+                    review=OuterRef('id'), reaction=ReviewReception.DISLIKE
+                ).values('review').annotate(count=Count('id')).values('count')[:1]
+            ),
+            user_reaction=Subquery(
+                ReviewReception.objects.filter(
+                    review=OuterRef('id'), user=self.request.user
+                ).values('reaction')[:1]
             )
         )
 
@@ -60,48 +68,31 @@ class UserReviewView(viewsets.ModelViewSet):
 
         check_and_add_badge(self.request.user)
 
-class ReviewReceptionView(viewsets.ModelViewSet):
+class ReviewReceptionView(generics.CreateAPIView):
     serializer_class = ReviewReceptionSerializer
 
-    def create(self, request, *args, **kwargs):
-        user = request.user
-        review_id = request.data.get('review')
-        reaction = request.data.get('reaction')
+    def perform_create(self, serializer):
+        user = self.request.user
+        review_id = self.request.data.get('review')
+        reaction = self.request.data.get('reaction')
 
-        if not review_id or not reaction:
+        if not reaction:
             return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            review = UserReview.objects.get(id=review_id)
-        except UserReview.DoesNotExist:
-            return Response({'error': 'Review not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+        review = get_object_or_404(UserReview, id=review_id)
         existing_reaction = ReviewReception.objects.filter(review=review, user=user).first()
 
         if existing_reaction:
-            existing_reaction.reaction = reaction
-            existing_reaction.save()
+            if str(existing_reaction.reaction).strip().lower() == str(reaction).strip().lower():
+                existing_reaction.delete()
+                return Response({'message': 'Reaction deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                existing_reaction.reaction = reaction
+                existing_reaction.save()
+                return Response({'message': 'Reaction updated successfully'}, status=status.HTTP_200_OK)
         else:
             ReviewReception.objects.create(review=review, reaction=reaction, user=user)
-
-        return Response({'message': 'Reaction created successfully'}, status=status.HTTP_201_CREATED)
-    
-    def destroy(self, request, *args, **kwargs):
-        reception_id = kwargs.get('pk')
-
-        if not reception_id:
-            return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            reception = ReviewReception.objects.get(id=reception_id)
-        except ReviewReception.DoesNotExist:
-            return Response({'error': 'Reaction not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-        if reception.user != request.user:
-            return Response({'error': 'You are not authorized to delete this reaction'}, status=status.HTTP_403_FORBIDDEN)
-
-        reception.delete()
-        return Response({'message': 'Reaction deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+            return Response({'message': 'Reaction created successfully'}, status=status.HTTP_201_CREATED)
 
 class ObtainedBadgeView(generics.ListAPIView):
     serializer_class = ObtainedBageSerializer
@@ -151,5 +142,15 @@ class BookDetailView(generics.RetrieveAPIView):
         url = f'https://openlibrary.org{key}.json'
         response = requests.get(url)
         book = response.json()
+
+        details = {
+            'title': book.get('title', ''),
+            'cover_edition_key': book.get('cover_edition_key', ''),
+            'key': book.get('key', ''),
+            'author_name': ', '.join(book.get('author_name', [])),
+            'first_publish_year': book.get('first_publish_year', ''),
+            'description': book.get('description', ''),
+            'rating': UserReview.objects.filter(book=key).aggregate(avg_rating=Avg('rating')).get('avg_rating') or 'No ratings yet'
+            }
         
-        return Response(book)
+        return Response(details)

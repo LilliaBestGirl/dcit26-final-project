@@ -68,3 +68,35 @@ class UserReviewTest(APITestCase):
         response = self.client.get('/api/book/review/?key=/works/OL20008185W')
         print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+class ReviewReceptionTest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpassword')
+
+        self.review = UserReview.objects.create(rating=5, review='Test review', book='Test book', user=self.user)
+        self.review_2 = UserReview.objects.create(rating=5, review='Test review 2', book='Test book 2', user=self.user)
+
+        self.reception = ReviewReception.objects.create(user=self.user, review=self.review, reaction='like')
+
+        response = self.client.post('/api/token/', {'username': 'testuser', 'password': 'testpassword'}, format='json')
+        self.access_token = response.data['access']
+
+    def test_like_review(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
+
+        response = self.client.post('/api/review/reaction/', {'review': self.review_2.id, 'reaction': 'like'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_update_reaction(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
+
+        response = self.client.post('/api/review/reaction/', {'review': self.review.id, 'reaction': 'dislike'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        print(ReviewReception.objects.get(user=self.user, review=self.review).reaction)
+
+    def test_cancel_reaction(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
+
+        response = self.client.post('/api/review/reaction/', {'review': self.review.id, 'reaction': 'like'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        print(ReviewReception.objects.filter(user=self.user, review=self.review).exists())

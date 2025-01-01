@@ -29,7 +29,8 @@ class ReviewSerializer(serializers.ModelSerializer):
 class ReviewReceptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReviewReception
-        fields = ['review', 'reaction']
+        fields = ['review', 'reaction', 'user']
+        read_only_fields = ['user']
 
     def validate(self, data):
         reaction = data.get('reaction')
