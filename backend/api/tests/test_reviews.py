@@ -12,7 +12,7 @@ class UserReviewTest(APITestCase):
         self.review_data = {
             'book': '1',
             'rating': 4,
-            'review': 'Great book!'
+            'review': 'Great book!',
         }
 
         self.review_data_2 = UserReview.objects.create(rating=2, review='Not bad, but could be better.', book='/works/OL20008185W', user=self.user)
@@ -24,7 +24,7 @@ class UserReviewTest(APITestCase):
     def test_create_review(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
         response = self.client.post('/api/user/review/', self.review_data, format='json')
-
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
     
     def test_get_reviews(self):

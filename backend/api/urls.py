@@ -17,4 +17,5 @@ urlpatterns = [
     path('api/book/review/', views.BookReviewsView.as_view(), name='review'),
     path('api/review/reaction/', views.ReviewReceptionView.as_view(), name='user_review'),
     path('api/user/badge/', views.ObtainedBadgeView.as_view(), name='user_badge'),
+    path('api/user/profile/', views.UserInfoView.as_view(), name='user_info'),
 ]

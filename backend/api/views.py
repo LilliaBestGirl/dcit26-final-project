@@ -1,18 +1,25 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, viewsets, serializers
+from rest_framework import generics, viewsets
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import NotFound
 from rest_framework import status
-from django.db.models import Count, Avg, Subquery, OuterRef
+from django.db.models import Count, Avg, Subquery, OuterRef, Value, CharField
 from django.contrib.auth.models import User
 import requests
 from .models import UserReview, ReviewReception, Badge, ObtainedBadge
 from .serializers import (ReviewSerializer, UserSerializer, ReviewReceptionSerializer,
-                          BadgeSerializer, ObtainedBageSerializer)
+                          BadgeSerializer, ObtainedBadgeSerializer)
 from .utils import check_and_add_badge
 
 # Create your views here.
+
+class UserInfoView(generics.ListAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return User.objects.filter(id=self.request.user.id)
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -21,9 +28,13 @@ class RegisterView(generics.CreateAPIView):
 
 class BookReviewsView(generics.ListAPIView):
     serializer_class = ReviewSerializer
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         key = self.request.query_params.get('key', '')
+
+        is_authenticated = self.request.user.is_authenticated
 
         queryset = UserReview.objects.filter(book=key).annotate(
             total_likes=Subquery(
@@ -40,7 +51,7 @@ class BookReviewsView(generics.ListAPIView):
                 ReviewReception.objects.filter(
                     review=OuterRef('id'), user=self.request.user
                 ).values('reaction')[:1]
-            )
+            ) if is_authenticated else Value(None, output_field=CharField())
         )
 
         if not queryset.exists():
@@ -59,6 +70,7 @@ class UserReviewView(viewsets.ModelViewSet):
         delete() will delete an existing review
     """
     serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return UserReview.objects.filter(user=self.request.user)
@@ -70,6 +82,8 @@ class UserReviewView(viewsets.ModelViewSet):
 
 class ReviewReceptionView(generics.CreateAPIView):
     serializer_class = ReviewReceptionSerializer
+    authentication_classes = []
+    permission_classes = [IsAuthenticated]
 
     def create(self, request):
         user = request.user
@@ -92,15 +106,19 @@ class ReviewReceptionView(generics.CreateAPIView):
                 return Response({'message': 'Reaction updated successfully'}, status=status.HTTP_200_OK)
         else:
             ReviewReception.objects.create(review=review, reaction=reaction, user=user)
+            check_and_add_badge(user)
             return Response({'message': 'Reaction created successfully'}, status=status.HTTP_201_CREATED)
 
 class ObtainedBadgeView(generics.ListAPIView):
-    serializer_class = ObtainedBageSerializer
+    serializer_class = BadgeSerializer
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return ObtainedBadge.objects.filter(user=self.request.user)
+        return Badge.objects.filter(obtainedbadge__user=self.request.user)
 
 class SearchView(generics.ListAPIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
     
     def get(self, request):
         query = request.query_params.get('q', '')
@@ -123,7 +141,6 @@ class SearchView(generics.ListAPIView):
             avg_rating = rating.get('avg_rating') or 'No ratings yet'
 
             books_list.append({
-                'numFound': total_results,
                 'title': title,
                 'cover_edition_key': cover_edition_key,
                 'key': key,
@@ -132,9 +149,23 @@ class SearchView(generics.ListAPIView):
                 'rating': avg_rating
             })
 
-        return Response(books_list)
+        rated_books = [book for book in books_list if book['rating'] != 'No ratings yet']
+        unrated_books = [book for book in books_list if book['rating'] == 'No ratings yet']
+
+        rated_books.sort(key=lambda x: x['rating'], reverse=True)
+        
+        sorted_results = rated_books + unrated_books
+
+        full_results = {
+            'numFound': total_results,
+            'docs': sorted_results
+        }
+
+        return Response(full_results)
 
 class BookDetailView(generics.RetrieveAPIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
     
     def get(self, request):
         key = request.query_params.get('key', '')
