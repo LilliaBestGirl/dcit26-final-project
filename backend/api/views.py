@@ -7,9 +7,9 @@ from rest_framework import status
 from django.db.models import Count, Avg, Subquery, OuterRef, Value, CharField
 from django.contrib.auth.models import User
 import requests
-from .models import UserReview, ReviewReception, Badge, ObtainedBadge
+from .models import UserReview, ReviewReception, Badge
 from .serializers import (ReviewSerializer, UserSerializer, ReviewReceptionSerializer,
-                          BadgeSerializer, ObtainedBadgeSerializer)
+                          BadgeSerializer)
 from .utils import check_and_add_badge
 
 # Create your views here.
@@ -82,7 +82,6 @@ class UserReviewView(viewsets.ModelViewSet):
 
 class ReviewReceptionView(generics.CreateAPIView):
     serializer_class = ReviewReceptionSerializer
-    authentication_classes = []
     permission_classes = [IsAuthenticated]
 
     def create(self, request):

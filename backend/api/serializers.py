@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import UserReview, ReviewReception, Badge, ObtainedBadge
+from .models import UserReview, ReviewReception, Badge
 
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -47,8 +47,3 @@ class BadgeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Badge
         fields = '__all__'
-
-class ObtainedBadgeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ObtainedBadge
-        fields = ['id', 'date_obtained', 'badge_obtained', 'user_id']
